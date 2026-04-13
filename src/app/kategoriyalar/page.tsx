@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getCategories, type CategoryGroup } from "@/lib/api";
 import Breadcrumb from "../components/BreadCrumb";
+import EmptyState from "../components/EmptyState";
 
 export default function CategoriesPage() {
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
@@ -38,10 +39,11 @@ export default function CategoriesPage() {
           ))}
         </div>
       ) : groups.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-5xl mb-4">📂</p>
-          <p className="text-gray-400">Kategoriyalar topilmadi</p>
-        </div>
+        <EmptyState
+          variant="catalog"
+          title="Kategoriyalar topilmadi"
+          description="Hozircha hech qanday kategoriya mavjud emas"
+        />
       ) : (
         <div className="space-y-8">
           {groups.map((group) => (

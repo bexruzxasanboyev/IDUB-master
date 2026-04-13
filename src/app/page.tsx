@@ -1,6 +1,7 @@
 import MovieHeroSwiper from "./components/MovieHeroSwiper";
 import Section from "./components/Section";
-import { getHome, type HomeSection, type DramaItem } from "@/lib/api";
+import EmptyState from "./components/EmptyState";
+import { getHome, normalizeImageUrl, type HomeSection, type DramaItem } from "@/lib/api";
 
 function normalizeGenres(genres?: any[]): string[] | undefined {
   return genres?.map((g) => (typeof g === "string" ? g : g.title || g.slug));
@@ -23,8 +24,8 @@ function toSlides(items: DramaItem[]) {
     id: d.id,
     title: d.title,
     desc: d.description || "",
-    banner: d.bannerUrl || d.posterUrl,
-    poster: d.posterUrl,
+    banner: normalizeImageUrl(d.bannerUrl || d.posterUrl),
+    poster: normalizeImageUrl(d.posterUrl),
     genres: normalizeGenres(d.genres as any[]),
     year: d.year,
     rating: d.rating ?? d.imdbRating,
@@ -80,11 +81,11 @@ export default async function Page() {
         })}
 
         {sections.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <p className="text-5xl mb-4">📡</p>
-            <h3 className="text-xl font-medium mb-2">Ma&apos;lumotlar yuklanmadi</h3>
-            <p className="text-gray-500 text-sm">Server bilan bog&apos;lanishda xatolik yuz berdi</p>
-          </div>
+          <EmptyState
+            variant="explore"
+            title="Ma'lumotlar yuklanmadi"
+            description="Server bilan bog'lanishda xatolik yuz berdi. Biroz kutib, qayta urinib ko'ring."
+          />
         )}
       </main>
     </div>

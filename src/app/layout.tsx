@@ -4,6 +4,7 @@ import Header from "./components/Header";
 import ScrollToTop from "./components/ScrollToTop";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 import { AuthProvider } from "@/lib/auth";
+import { SavedProvider } from "@/lib/saved-context";
 
 export const metadata: Metadata = {
   title: "IDUB — Koreya Dramalari va Filmlar",
@@ -22,10 +23,12 @@ export default function RootLayout({
         className="antialiased bg-main font-text text-white"
       >
         <AuthProvider>
-          <Header />
-          {children}
-          <ScrollToTop />
-          <AnalyticsTracker />
+          <SavedProvider>
+            <Header />
+            {children}
+            <ScrollToTop />
+            <AnalyticsTracker />
+          </SavedProvider>
         </AuthProvider>
       </body>
     </html>

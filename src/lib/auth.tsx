@@ -11,14 +11,51 @@ type AuthState = {
   verify: (phone: string, code: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  setUser: (updater: UserProfile | ((prev: UserProfile | null) => UserProfile | null)) => void;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
 
+function persistUserToStorage(nextUser: UserProfile | null) {
+  if (typeof window === "undefined") return;
+  try {
+    const stored = localStorage.getItem("idub_auth");
+    if (!stored) return;
+    const parsed = JSON.parse(stored);
+    if (nextUser) {
+      localStorage.setItem(
+        "idub_auth",
+        JSON.stringify({ ...parsed, user: nextUser })
+      );
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUserState] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Wrapper that also syncs to localStorage
+  const setUser = useCallback(
+    (
+      updater:
+        | UserProfile
+        | ((prev: UserProfile | null) => UserProfile | null)
+    ) => {
+      setUserState((prev) => {
+        const next =
+          typeof updater === "function"
+            ? (updater as (p: UserProfile | null) => UserProfile | null)(prev)
+            : updater;
+        persistUserToStorage(next);
+        return next;
+      });
+    },
+    []
+  );
 
   // Initialize from localStorage
   useEffect(() => {
@@ -95,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, verify, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, loading, login, verify, logout, refreshUser, setUser }}>
       {children}
     </AuthContext.Provider>
   );

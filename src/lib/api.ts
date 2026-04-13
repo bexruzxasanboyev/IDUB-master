@@ -2,6 +2,22 @@ const SERVER_URL = process.env.NEXT_PUBLIC_API_URL || "https://idubbackend.asosi
 const isServer = typeof window === "undefined";
 const BASE_URL = isServer ? SERVER_URL : "/api-proxy";
 
+export function normalizeImageUrl(url?: string | null): string {
+  if (!url) return "";
+  if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    try {
+      const parsed = new URL(url);
+      const serverHost = new URL(SERVER_URL).host;
+      if (parsed.host !== serverHost) {
+        return `${SERVER_URL}${parsed.pathname}`;
+      }
+    } catch {}
+    return url;
+  }
+  return `${SERVER_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
 type ApiResponse<T> = {
   ok: true;
   data: T;
@@ -97,9 +113,16 @@ export async function getDramaSeasons(id: string) {
   return request<{ seasons: ApiSeason[] }>(`/dramas/${id}/seasons`);
 }
 
-export async function getDramaEpisodes(id: string, seasonNumber?: number) {
+export async function getDramaEpisodes(
+  id: string,
+  seasonNumber?: number,
+  token?: string
+) {
   const qs = seasonNumber !== undefined ? `?seasonNumber=${seasonNumber}` : "";
-  return request<{ episodes: ApiEpisode[] }>(`/dramas/${id}/episodes${qs}`);
+  return request<{ items: ApiEpisode[]; pagination: Pagination }>(
+    `/dramas/${id}/episodes${qs}`,
+    token ? { token } : undefined
+  );
 }
 
 export async function markDramaViewed(id: string, token: string) {
@@ -158,19 +181,21 @@ export async function authRefresh(refreshToken: string) {
 
 // ─── PROFILE ────────────────────────────────────────
 export async function getMe(token: string) {
-  return request<UserProfile>("/me", { token });
+  const data = await request<{ user: UserProfile; needsOnboarding: boolean }>("/me", { token });
+  return data.user;
 }
 
 export async function checkToken(token: string) {
   return request<object>("/me/token-check", { token });
 }
 
-export async function updateProfile(token: string, data: { name?: string; birthDate?: string }) {
-  return request<{ updated: boolean }>("/me/profile", {
+export async function updateProfile(token: string, data: { name: string; birthDate: string }) {
+  const res = await request<{ user: UserProfile; needsOnboarding: boolean }>("/me/profile", {
     method: "PUT",
     token,
     body: JSON.stringify(data),
   });
+  return res.user;
 }
 
 export async function updateAvatar(token: string, file: File) {
@@ -184,15 +209,16 @@ export async function updateAvatar(token: string, file: File) {
   });
   const json = await res.json();
   if (!json.ok) throw new ApiError(json.error.code, json.error.message, res.status);
-  return json.data as { avatarUrl: string };
+  return (json.data as { user: UserProfile; needsOnboarding: boolean }).user;
 }
 
 export async function updateGenres(token: string, genreSlugs: string[]) {
-  return request<{ updated: boolean }>("/me/genres", {
+  const res = await request<{ user: UserProfile; needsOnboarding: boolean }>("/me/genres", {
     method: "PUT",
     token,
     body: JSON.stringify({ genreSlugs }),
   });
+  return res.user;
 }
 
 // ─── FAVORITE ACTORS ────────────────────────────────
@@ -214,11 +240,12 @@ export async function getPlans() {
 }
 
 export async function getPremiumFeatures() {
-  return request<{ features: PremiumFeature[] }>("/premium-features");
+  return request<{ items: PremiumFeature[] }>("/premium-features");
 }
 
 export async function getSubscription(token: string) {
-  return request<SubscriptionInfo>("/me/subscription", { token });
+  const data = await request<{ activeSubscription: SubscriptionInfo | null }>("/me/subscription", { token });
+  return data.activeSubscription;
 }
 
 // ─── SAVED ──────────────────────────────────────────
@@ -239,7 +266,7 @@ export async function removeSaved(token: string, dramaId: string) {
 }
 
 export async function getSaved(token: string) {
-  return request<{ items: DramaItem[] }>("/saved", { token });
+  return request<{ items: SavedItem[] }>("/saved", { token });
 }
 
 export async function bulkRemoveSaved(token: string, dramaIds: string[]) {
@@ -329,11 +356,14 @@ export async function purchaseCoinPackage(token: string, packageId: string) {
 
 // ─── EPISODES & PLAYBACK ────────────────────────────
 export async function unlockEpisodes(token: string, dramaId: string, episodeNumbers: number[]) {
-  return request<{ unlocked: number[]; newBalance: number }>("/episodes/unlock", {
-    method: "POST",
-    token,
-    body: JSON.stringify({ dramaId, episodeNumbers }),
-  });
+  return request<{ unlockedEpisodeNumbers: number[]; remainingCoins: number }>(
+    "/episodes/unlock",
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify({ dramaId, episodeNumbers }),
+    }
+  );
 }
 
 export async function getPlaybackUrl(token: string, episodeId: string) {
@@ -400,7 +430,7 @@ export async function searchActors(q: string, page = 1, limit = 20) {
 }
 
 export async function getActor(id: string) {
-  return request<{ actor: ActorDetail }>(`/actors/${id}`);
+  return request<ActorDetail>(`/actors/${id}`);
 }
 
 export async function getActorDramas(id: string, page = 1, limit = 20) {
@@ -606,13 +636,19 @@ export type ApiSeason = {
 export type ApiEpisode = {
   id: string;
   episodeNumber: number;
+  seasonNumber: number;
+  seasonTitle?: string | null;
   title: string;
+  description?: string;
+  videoProvider?: string;
+  videoUrl?: string;
+  videoStatus?: string;
+  isOpen?: boolean;
+  reason?: string;
+  unlockPricePerEpisode?: number;
   preview?: string;
   duration?: number;
   releaseDate?: string;
-  videoUrl?: string;
-  isFree?: boolean;
-  isUnlocked?: boolean;
 };
 
 export type AuthResult = {
@@ -636,27 +672,52 @@ export type UserProfile = {
   favoriteActors?: string[];
 };
 
+export type PlanBenefit = {
+  id: string;
+  iconKey?: string;
+  text: string;
+};
+
+export type PlanCapabilities = {
+  canDownload?: boolean;
+  maxQuality?: string;
+  noAds?: boolean;
+  canGift?: boolean;
+  canShare?: boolean;
+  offlineExpiresHours?: number | null;
+};
+
 export type Plan = {
   id: string;
   code: string;
   title: string;
   price: number;
-  durationDays: number;
-  benefits?: string[];
-  capabilities?: string[];
+  currency?: string;
+  periodDays: number;
+  isActive?: boolean;
+  benefits?: PlanBenefit[];
+  capabilities?: PlanCapabilities;
 };
 
 export type PremiumFeature = {
-  title: string;
-  description: string;
-  icon?: string;
+  id: string;
+  iconKey?: string;
+  text: string;
+  sortOrder?: number;
 };
 
 export type SubscriptionInfo = {
-  plan?: { id: string; code: string; title: string };
-  startsAt?: string;
-  expiresAt?: string;
-  isActive: boolean;
+  plan?: {
+    id: string;
+    code: string;
+    title: string;
+    price?: number;
+    currency?: string;
+    periodDays?: number;
+  };
+  startAt?: string;
+  endAt?: string;
+  status?: string;
 };
 
 export type CoinInfo = {
@@ -701,13 +762,39 @@ export type NotificationItem = {
   data?: Record<string, unknown>;
 };
 
+export type SavedItem = {
+  dramaId: string;
+  savedAt: string;
+  source?: string | null;
+  drama: {
+    title: string;
+    posterUrl: string;
+    bannerUrl?: string | null;
+    description?: string | null;
+    status?: string;
+    totalEpisodes?: number;
+    genres?: Genre[];
+  };
+};
+
 export type HistoryItem = {
   dramaId: string;
-  drama?: DramaItem;
-  episodeNumber: number;
-  positionSec: number;
-  completed: boolean;
-  updatedAt: string;
+  lastWatchedAt: string;
+  lastEpisodeNumber: number;
+  lastPositionSec: number;
+  watchedEpisodesCount?: number;
+  isCompleted: boolean;
+  source?: string | null;
+  drama?: {
+    title: string;
+    posterUrl?: string | null;
+    bannerUrl?: string | null;
+    description?: string | null;
+    status?: string;
+    totalEpisodes?: number;
+    duration?: number;
+    genres?: Genre[];
+  };
 };
 
 export type FavoriteActor = {
@@ -724,12 +811,25 @@ export type ActorItem = {
   dramaCount?: number;
 };
 
+export type ActorDramaItem = {
+  id: string;
+  title: string;
+  posterUrl: string;
+  source?: string;
+  releaseYear?: number;
+  imdbRating?: number | null;
+  viewsCount?: number;
+  totalEpisodes?: number;
+  role?: string;
+  genres?: Genre[];
+};
+
 export type ActorDetail = {
   id: string;
   name: string;
   bio?: string;
   actorImg?: string;
-  dramas?: DramaItem[];
+  dramas?: ActorDramaItem[];
 };
 
 export type Genre = {

@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { getFavoriteActors, removeFavoriteActor, type FavoriteActor } from "@/lib/api";
+import { getFavoriteActors, removeFavoriteActor, normalizeImageUrl, type FavoriteActor } from "@/lib/api";
 import Breadcrumb from "../components/BreadCrumb";
+import EmptyState from "../components/EmptyState";
 import { FaHeart } from "react-icons/fa";
 
 export default function FavoriteActorsPage() {
@@ -63,14 +64,19 @@ export default function FavoriteActorsPage() {
           ))}
         </div>
       ) : actors.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-5xl mb-4">🎭</p>
-          <h3 className="text-xl font-medium mb-2">Sevimli aktyorlar yo&apos;q</h3>
-          <p className="text-gray-500 text-sm mb-4">Aktyorlar sahifasidan sevimlilaringizni qo&apos;shing</p>
-          <Link href="/aktyorlar" className="px-5 py-2.5 bg-second rounded-lg text-sm font-medium hover:bg-second/80 transition">
-            Aktyorlarni ko&apos;rish
-          </Link>
-        </div>
+        <EmptyState
+          variant="favorite-actors"
+          title="Sevimli aktyorlar yo'q"
+          description="Yoqtirgan aktyorlaringizni sevimlilarga qo'shing va ularning yangi loyihalaridan birinchi bo'lib xabardor bo'ling"
+          action={
+            <Link
+              href="/aktyorlar"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-second rounded-lg text-sm font-medium text-white hover:bg-second/85 transition active:scale-95 shadow-[0_8px_30px_rgba(126,84,230,0.25)]"
+            >
+              Aktyorlarni ko&apos;rish
+            </Link>
+          }
+        />
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 sm:gap-5">
           {actors.map((actor) => (
@@ -78,7 +84,7 @@ export default function FavoriteActorsPage() {
               <Link href={`/aktyorlar/${actor.id}`} className="relative mb-2">
                 <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-second/50 transition">
                   {actor.actorImg ? (
-                    <Image src={actor.actorImg} alt={actor.name} fill className="object-cover" />
+                    <Image src={normalizeImageUrl(actor.actorImg)} alt={actor.name} fill className="object-cover" />
                   ) : (
                     <div className="w-full h-full bg-white/10 flex items-center justify-center text-2xl font-bold text-white/30">
                       {actor.name.charAt(0)}

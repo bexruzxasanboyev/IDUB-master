@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { getRandomDramas, getRecommendation, type DramaItem } from "@/lib/api";
+import { getRandomDramas, getRecommendation, normalizeImageUrl, type DramaItem } from "@/lib/api";
 import Card from "../components/Card";
 import Breadcrumb from "../components/BreadCrumb";
+import EmptyState from "../components/EmptyState";
 import Image from "next/image";
 import Link from "next/link";
 import { FaPlay, FaStar, FaSyncAlt } from "react-icons/fa";
@@ -82,7 +83,7 @@ export default function RecommendationsPage() {
         <div className="relative rounded-2xl overflow-hidden mb-8 border border-white/5">
           <div className="relative h-48 sm:h-64 md:h-80">
             <Image
-              src={topRec.bannerUrl || topRec.posterUrl}
+              src={normalizeImageUrl(topRec.bannerUrl || topRec.posterUrl)}
               alt={topRec.title}
               fill
               className="object-cover"
@@ -115,18 +116,19 @@ export default function RecommendationsPage() {
 
       {/* Random recommendations */}
       {fetching ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="aspect-[2/3] skeleton rounded-xl" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-5xl mb-4">🎬</p>
-          <p className="text-gray-400">Tavsiyalar topilmadi</p>
-        </div>
+        <EmptyState
+          variant="recommendations"
+          title="Tavsiyalar hali tayyor emas"
+          description="Bir nechta drama ko'ring yoki janrlarni tanlang — sizga mos tavsiyalar shu yerda paydo bo'ladi"
+        />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {items.map((d) => (
             <Card
               key={d.id}

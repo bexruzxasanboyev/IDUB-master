@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { FaSearch, FaTimes, FaUser, FaBell } from "react-icons/fa";
-import { SlidersHorizontal, Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { FaUser, FaBell } from "react-icons/fa";
+import { Search, Menu, X } from "lucide-react";
 import Image from "next/image";
-import FilterModal from "./FilterModal";
 import { useAuth } from "@/lib/auth";
-import { getUnreadCount } from "@/lib/api";
+import { getUnreadCount, normalizeImageUrl } from "@/lib/api";
+import HeaderSearchDropdown from "./HeaderSearchDropdown";
 
 const navs = [
   { name: "Asosiy", href: "/" },
@@ -17,20 +17,13 @@ const navs = [
   { name: "Mashxur", href: "/mashxur" },
   { name: "Janrlar", href: "/janrlar" },
   { name: "Aktyorlar", href: "/aktyorlar" },
-  { name: "Jadval", href: "/jadval" },
 ];
 
 export default function Header() {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, token } = useAuth();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  const searchBoxRef = useRef<HTMLDivElement>(null);
 
   const [openSearch, setOpenSearch] = useState(false);
-  const [query, setQuery] = useState("");
-  const [openFilter, setOpenFilter] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -44,44 +37,41 @@ export default function Header() {
   useEffect(() => {
     setMobileMenu(false);
     setOpenSearch(false);
-    setQuery("");
   }, [pathname]);
 
+  // Keyboard shortcut "/" to open search
   useEffect(() => {
-    if (openSearch) searchInputRef.current?.focus();
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "/" && !openSearch) {
+        const target = e.target as HTMLElement;
+        const tag = target?.tagName?.toLowerCase();
+        if (tag === "input" || tag === "textarea" || target?.isContentEditable) {
+          return;
+        }
+        e.preventDefault();
+        setOpenSearch(true);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, [openSearch]);
 
   // Fetch unread notification count
   useEffect(() => {
-    if (!token) { setUnreadCount(0); return; }
-    getUnreadCount(token).then((data) => setUnreadCount(data.count)).catch(() => {});
-    // Poll every 60 seconds
+    if (!token) {
+      setUnreadCount(0);
+      return;
+    }
+    getUnreadCount(token)
+      .then((data) => setUnreadCount(data.count))
+      .catch(() => {});
     const interval = setInterval(() => {
-      getUnreadCount(token).then((data) => setUnreadCount(data.count)).catch(() => {});
+      getUnreadCount(token)
+        .then((data) => setUnreadCount(data.count))
+        .catch(() => {});
     }, 60000);
     return () => clearInterval(interval);
   }, [token]);
-
-  // Netflix-style: tashqariga bosganda search yopiladi
-  useEffect(() => {
-    if (!openSearch) return;
-    const handler = (e: MouseEvent) => {
-      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
-        setOpenSearch(false);
-        setQuery("");
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [openSearch]);
-
-  const handleSearch = () => {
-    if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
-      setOpenSearch(false);
-      setQuery("");
-    }
-  };
 
   return (
     <>
@@ -121,52 +111,32 @@ export default function Header() {
           </div>
 
           {/* RIGHT: Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Netflix-style inline expanding search */}
-            <div ref={searchBoxRef} className="relative flex items-center">
-              <div
-                className={`flex items-center transition-all duration-300 ease-in-out rounded overflow-hidden ${
-                  openSearch
-                    ? "w-[160px] sm:w-[220px] md:w-[280px] bg-black/90 border border-white/60"
-                    : "w-9 bg-transparent border border-transparent"
-                }`}
-                style={{ height: 36 }}
-              >
-                <button
-                  onClick={() => {
-                    if (openSearch && query.trim()) {
-                      handleSearch();
-                    } else {
-                      setOpenSearch((p) => !p);
-                      if (openSearch) setQuery("");
-                    }
-                  }}
-                  className="shrink-0 w-9 h-9 flex items-center justify-center text-white hover:text-second transition-colors"
-                  aria-label="Qidirish"
-                >
-                  <FaSearch size={15} />
-                </button>
-                <input
-                  ref={searchInputRef}
-                  className={`bg-transparent text-white text-sm placeholder:text-gray-500 outline-none h-full transition-all duration-300 ${
-                    openSearch ? "w-full pr-2 opacity-100" : "w-0 opacity-0"
-                  }`}
-                  placeholder="Film, serial, aktyor..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSearch();
-                    if (e.key === "Escape") {
-                      setOpenSearch(false);
-                      setQuery("");
-                    }
-                  }}
-                />
-               
-              </div>
-            </div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Search trigger — full-screen YouTube-style dropdown */}
+            <button
+              onClick={() => setOpenSearch(true)}
+              aria-label="Qidirish"
+              className="group hidden sm:flex items-center gap-2.5 px-3.5 py-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-second/30 rounded-full transition-all duration-300"
+            >
+              <Search
+                size={15}
+                className="text-gray-400 group-hover:text-second transition-colors"
+              />
+              <span className="text-xs text-gray-500 group-hover:text-white/80 transition-colors pr-1 hidden md:inline">
+                Film, serial qidirish...
+              </span>
+              <span className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-semibold text-gray-500">
+                /
+              </span>
+            </button>
+            <button
+              onClick={() => setOpenSearch(true)}
+              aria-label="Qidirish"
+              className="sm:hidden w-9 h-9 flex items-center justify-center text-white/80 hover:text-second transition-colors"
+            >
+              <Search size={18} />
+            </button>
 
-           
 
             {/* Notifications */}
             {user && (
@@ -190,7 +160,7 @@ export default function Header() {
               className="w-9 h-9 flex items-center justify-center rounded-full overflow-hidden border border-white/10 hover:border-second/50 transition-colors shrink-0"
             >
               {user?.avatarUrl ? (
-                <Image src={user.avatarUrl} alt="" width={36} height={36} className="w-full h-full object-cover" />
+                <Image src={normalizeImageUrl(user.avatarUrl)} alt="" width={36} height={36} className="w-full h-full object-cover" />
               ) : (
                 <FaUser className="text-gray-400 text-xs" />
               )}
@@ -233,6 +203,9 @@ export default function Header() {
         </div>
       </header>
 
+      {openSearch && (
+        <HeaderSearchDropdown onClose={() => setOpenSearch(false)} />
+      )}
     </>
   );
 }

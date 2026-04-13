@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image, { type ImageProps } from "next/image";
+import { normalizeImageUrl } from "@/lib/api";
 
 type SafeImageProps = ImageProps & {
   fallbackText?: string;
@@ -23,9 +24,12 @@ export default function SafeImage({ fallbackText, alt, className, ...props }: Sa
     );
   }
 
+  const normalizedSrc = normalizeImageUrl(props.src as string);
+
   return (
     <Image
       {...props}
+      src={normalizedSrc || props.src}
       alt={alt}
       className={className}
       onError={() => setError(true)}

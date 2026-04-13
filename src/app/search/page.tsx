@@ -4,7 +4,9 @@ import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { SlidersHorizontal, X, Calendar, Star } from "lucide-react";
 import Card from "../components/Card";
+import EmptyState from "../components/EmptyState";
 import { searchDramas, getTopSearchedDramas, getTopSearches, getDramas, getGenres, trackSearchClick, type DramaItem, type TopSearch, type Genre } from "@/lib/api";
+import { addSearchHistory } from "@/lib/search-history";
 
 function capitalize(str: string): string {
   return str
@@ -78,6 +80,7 @@ export default function SearchPage() {
       setLoading(true);
       try {
         if (query.trim()) {
+          addSearchHistory(query.trim());
           const data = await searchDramas(query);
           setResults(mapItems(data.items));
         } else {
@@ -215,21 +218,27 @@ export default function SearchPage() {
 
         {/* Loading */}
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
             {Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="aspect-[2/3] skeleton rounded-xl" />
             ))}
           </div>
         ) : results.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-center">
-            <p className="text-5xl sm:text-7xl mb-4 sm:mb-6">😢</p>
-            <h3 className="text-xl sm:text-2xl font-medium mb-2 sm:mb-3">Hech narsa topilmadi</h3>
-            <p className="text-zinc-400 max-w-md mb-6 sm:mb-8 text-sm sm:text-base px-4">
-              Boshqa so&apos;rov bilan qidirib ko&apos;ring yoki filterlarni o&apos;zgartiring
-            </p>
-          </div>
+          <EmptyState
+            variant={filtersApplied ? "filter" : "search"}
+            title={
+              filtersApplied
+                ? "Filter natijalari topilmadi"
+                : "Hech narsa topilmadi"
+            }
+            description={
+              filtersApplied
+                ? "Filterlarni qayta sozlab ko'ring yoki boshqa janrni tanlang"
+                : "Boshqa so'rov bilan qidirib ko'ring yoki filterlarni o'zgartiring"
+            }
+          />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
             {results.map((movie) => (
               <div key={movie.id} onClick={() => handleCardClick(movie.id)}>
                 <Card

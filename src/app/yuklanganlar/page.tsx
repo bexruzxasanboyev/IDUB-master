@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { getDownloads, deleteDownload, type DownloadItem } from "@/lib/api";
 import Breadcrumb from "../components/BreadCrumb";
+import EmptyState from "../components/EmptyState";
 import { FaTrash, FaPlay } from "react-icons/fa";
 
 export default function DownloadsPage() {
@@ -60,11 +61,11 @@ export default function DownloadsPage() {
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-5xl mb-4">📥</p>
-          <h3 className="text-xl font-medium mb-2">Hech narsa yuklanmagan</h3>
-          <p className="text-gray-500 text-sm">Dramalarni yuklab oling va offlayn ko&apos;ring</p>
-        </div>
+        <EmptyState
+          variant="downloads"
+          title="Hech narsa yuklanmagan"
+          description="Dramalarni yuklab oling va internetsiz ham bemalol tomosha qiling"
+        />
       ) : (
         <div className="space-y-2">
           {items.map((item) => (

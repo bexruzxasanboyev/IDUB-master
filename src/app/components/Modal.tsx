@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FaTimes, FaPlay } from "react-icons/fa";
+import { normalizeImageUrl } from "@/lib/api";
 
 type ModalProps = {
   open: boolean;
@@ -55,7 +56,7 @@ export default function Modal({ open, onClose, movie }: ModalProps) {
         {/* Image */}
         <div className="relative h-48 sm:h-64 md:h-80 overflow-hidden">
           <Image
-            src={movie.banner || movie.poster}
+            src={normalizeImageUrl(movie.banner || movie.poster)}
             alt={movie.title}
             fill
             className="object-cover"

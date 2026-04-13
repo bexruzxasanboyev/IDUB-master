@@ -3,30 +3,20 @@
 import { useState } from "react";
 import { FaBookmark, FaRegBookmark } from "react-icons/fa";
 import { useAuth } from "@/lib/auth";
-import { addSaved, removeSaved } from "@/lib/api";
+import { useSaved } from "@/lib/saved-context";
 
 export default function SaveButton({ dramaId }: { dramaId: string }) {
   const { token } = useAuth();
-  const [saved, setSaved] = useState(false);
+  const { isSaved, toggleSaved } = useSaved();
   const [loading, setLoading] = useState(false);
 
-  const toggle = async () => {
-    if (!token) {
-      // Not logged in — just toggle locally
-      setSaved(!saved);
-      return;
-    }
+  const saved = isSaved(dramaId);
 
+  const toggle = async () => {
+    if (!token || loading) return;
     setLoading(true);
     try {
-      if (saved) {
-        await removeSaved(token, dramaId);
-      } else {
-        await addSaved(token, dramaId);
-      }
-      setSaved(!saved);
-    } catch {
-      // ignore
+      await toggleSaved(dramaId, "web");
     } finally {
       setLoading(false);
     }

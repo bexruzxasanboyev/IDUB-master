@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getActors, searchActors, type ActorItem, type Pagination } from "@/lib/api";
+import { getActors, searchActors, normalizeImageUrl, type ActorItem, type Pagination } from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
 import Breadcrumb from "../components/BreadCrumb";
+import EmptyState from "../components/EmptyState";
 import { FaSearch, FaTimes } from "react-icons/fa";
 
 export default function AktyorlarPage() {
@@ -88,21 +89,33 @@ export default function AktyorlarPage() {
       </div>
 
       {loading || searching ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 skeleton rounded-full mb-2" />
-              <div className="w-16 h-3 skeleton rounded" />
+        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
+          {Array.from({ length: 18 }).map((_, i) => (
+            <div key={i} className="text-center space-y-2">
+              <div className="relative aspect-square w-full max-w-[140px] mx-auto rounded-full overflow-hidden border-2 border-white/10">
+                <div className="absolute inset-0 skeleton rounded-full" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-3.5 w-4/5 mx-auto rounded skeleton" />
+                <div className="h-2.5 w-1/2 mx-auto rounded skeleton" />
+              </div>
             </div>
           ))}
         </div>
       ) : actors.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-4xl mb-3">🎭</p>
-          <p className="text-gray-400">
-            {searchQuery ? `"${searchQuery}" bo'yicha aktyor topilmadi` : "Aktyorlar topilmadi"}
-          </p>
-        </div>
+        <EmptyState
+          variant="favorite-actors"
+          title={
+            searchQuery
+              ? `"${searchQuery}" bo'yicha aktyor topilmadi`
+              : "Aktyorlar topilmadi"
+          }
+          description={
+            searchQuery
+              ? "Ismni boshqacha yozib ko'ring yoki qidiruvni tozalang"
+              : "Hozircha aktyorlar ro'yxati mavjud emas"
+          }
+        />
       ) : (
         <>
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
@@ -114,7 +127,7 @@ export default function AktyorlarPage() {
               >
                 <div className="relative aspect-square rounded-full overflow-hidden mx-auto w-full max-w-[140px] border-2 border-white/10 group-hover:border-second/50 transition">
                   {actor.actorImg ? (
-                    <Image src={actor.actorImg} alt={actor.name} fill className="object-cover" />
+                    <Image src={normalizeImageUrl(actor.actorImg)} alt={actor.name} fill className="object-cover" />
                   ) : (
                     <div className="w-full h-full bg-white/10 flex items-center justify-center text-3xl font-bold text-white/30">
                       {actor.name.charAt(0)}

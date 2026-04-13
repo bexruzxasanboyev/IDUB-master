@@ -4,7 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BiRightArrowAlt } from "react-icons/bi";
 
-export default function Breadcrumb() {
+type BreadcrumbProps = {
+  labels?: Record<string, string>;
+  lastLabel?: string;
+};
+
+export default function Breadcrumb({ labels, lastLabel }: BreadcrumbProps = {}) {
   const pathname = usePathname();
   const pathParts = pathname.split("/").filter(Boolean);
 
@@ -16,20 +21,24 @@ export default function Breadcrumb() {
       {pathParts.map((part, index) => {
         const href = "/" + pathParts.slice(0, index + 1).join("/");
         const isLast = index === pathParts.length - 1;
+        const label =
+          (isLast && lastLabel) ||
+          labels?.[part] ||
+          decodeURIComponent(part).replace(/-/g, " ");
 
         return (
           <div key={href} className="flex items-center gap-1.5 sm:gap-2">
             <span className="text-gray-500"><BiRightArrowAlt /></span>
             {isLast ? (
-              <span className="text-white capitalize">
-                {decodeURIComponent(part).replace(/-/g, " ")}
+              <span className="text-white capitalize truncate max-w-[200px] sm:max-w-none">
+                {label}
               </span>
             ) : (
               <Link
                 href={href}
                 className="hover:text-white transition capitalize text-gray-400"
               >
-                {decodeURIComponent(part).replace(/-/g, " ")}
+                {label}
               </Link>
             )}
           </div>

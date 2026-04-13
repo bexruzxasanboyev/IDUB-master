@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { FaBookmark, FaRegBookmark, FaPlay } from "react-icons/fa";
 import { useAuth } from "@/lib/auth";
-import { addSaved, removeSaved } from "@/lib/api";
+import { normalizeImageUrl } from "@/lib/api";
+import { useSaved } from "@/lib/saved-context";
 
 type CardProps = {
   id: string;
@@ -25,23 +26,17 @@ export default function Card({
   genres,
 }: CardProps) {
   const { token } = useAuth();
-  const [saved, setSaved] = useState(false);
+  const { isSaved, toggleSaved } = useSaved();
   const [savingInProgress, setSavingInProgress] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const normalizedPoster = normalizeImageUrl(poster);
+  const saved = isSaved(id);
 
   const toggleSave = async () => {
-    if (savingInProgress) return;
-    if (!token) return;
+    if (savingInProgress || !token) return;
     setSavingInProgress(true);
     try {
-      if (saved) {
-        await removeSaved(token, id);
-      } else {
-        await addSaved(token, id, "web");
-      }
-      setSaved(!saved);
-    } catch {
-      // ignore
+      await toggleSaved(id, "web");
     } finally {
       setSavingInProgress(false);
     }
@@ -56,13 +51,13 @@ export default function Card({
         hover:shadow-[0_20px_60px_rgba(126,84,230,0.15),0_8px_30px_rgba(0,0,0,0.5)]
         hover:z-10"
     >
-      {imgError || !poster ? (
+      {imgError || !normalizedPoster ? (
         <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex items-center justify-center">
           <span className="text-white/30 text-4xl font-bold">{title?.charAt(0) || "?"}</span>
         </div>
       ) : (
         <Image
-          src={poster}
+          src={normalizedPoster}
           alt={title}
           width={500}
           height={750}

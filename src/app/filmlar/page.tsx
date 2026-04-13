@@ -1,6 +1,7 @@
 import { getDramas } from "@/lib/api";
 import Breadcrumb from "../components/BreadCrumb";
 import Card from "../components/Card";
+import EmptyState from "../components/EmptyState";
 
 export default async function FilmlarPage({
   searchParams,
@@ -36,10 +37,11 @@ export default async function FilmlarPage({
       </h1>
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-4xl mb-3">😢</p>
-          <p className="text-gray-400">Hech narsa topilmadi</p>
-        </div>
+        <EmptyState
+          variant="dramas"
+          title="Filmlar topilmadi"
+          description="Hozircha bu bo'limda filmlar mavjud emas. Qayta tashrif buyurib turing!"
+        />
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5">

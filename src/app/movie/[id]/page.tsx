@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import SafeImage from "@/app/components/SafeImage";
 import { FaPlay, FaStar, FaShareAlt } from "react-icons/fa";
 import { LuClock, LuEye, LuFilm, LuThumbsUp, LuThumbsDown } from "react-icons/lu";
-import Player from "@/app/components/Player";
-import Card from "@/app/components/Card";
-import { getDrama, getSimilarDramas, getDramaEpisodes, getDramaSeasons } from "@/lib/api";
+import { getDrama, getSimilarDramas, getDramaEpisodes, type ApiEpisode } from "@/lib/api";
+import EpisodePlayer from "./EpisodePlayer";
+import Description from "./Description";
 import SaveButton from "./SaveButton";
 import ViewTracker from "./ViewTracker";
+import SimilarSwiper from "./SimilarSwiper";
 
 type MoviePageProps = {
   params: Promise<{ id: string }>;
@@ -25,57 +27,36 @@ export default async function MoviePage({ params }: MoviePageProps) {
 
   if (!drama) notFound();
 
-  // Fetch similar, seasons, episodes in parallel
-  const [similarData, seasonsData] = await Promise.all([
+  // Fetch similar and episodes in parallel
+  const [similarData, episodesData] = await Promise.all([
     getSimilarDramas(id).catch(() => ({ items: [] })),
-    getDramaSeasons(id).catch(() => ({ seasons: [] })),
+    getDramaEpisodes(id).catch(() => ({ items: [] as ApiEpisode[], pagination: {} as any })),
   ]);
 
-  // Fetch episodes for each season
-  const seasonsWithEpisodes = await Promise.all(
-    seasonsData.seasons.map(async (s) => {
-      const epData = await getDramaEpisodes(id, s.seasonNumber).catch(() => ({ episodes: [] }));
-      const episodes = epData.episodes || [];
-      return {
-        season: s.seasonNumber,
-        poster: s.poster || drama.posterUrl,
-        episodes: episodes.map((ep) => ({
-          id: ep.id,
-          episode: ep.episodeNumber,
-          title: ep.title,
-          preview: ep.preview || "",
-          duration: ep.duration || 0,
-          releaseDate: ep.releaseDate,
-          video: ep.videoUrl || "",
-          isFree: ep.isFree,
-          isUnlocked: ep.isUnlocked,
-        })),
-      };
-    })
-  );
+  // Group episodes by seasonNumber
+  const episodeItems = episodesData.items || [];
+  const seasonsMap = new Map<number, typeof episodeItems>();
+  for (const ep of episodeItems) {
+    const sn = ep.seasonNumber || 1;
+    if (!seasonsMap.has(sn)) seasonsMap.set(sn, []);
+    seasonsMap.get(sn)!.push(ep);
+  }
 
-  // If no seasons from API, try drama.episodes directly
-  const playerSeasons = seasonsWithEpisodes.length > 0
-    ? seasonsWithEpisodes
-    : drama.seasons
-      ? drama.seasons.map((s) => ({
-          season: s.seasonNumber,
-          poster: s.poster || drama.posterUrl,
-          episodes: (drama.episodes || [])
-            .filter((_, i) => i < 50)
-            .map((ep) => ({
-              id: ep.id,
-              episode: ep.episodeNumber,
-              title: ep.title,
-              preview: ep.preview || "",
-              duration: ep.duration || 0,
-              releaseDate: ep.releaseDate,
-              video: ep.videoUrl || "",
-              isFree: ep.isFree,
-              isUnlocked: ep.isUnlocked,
-            })),
-        }))
-      : [];
+  const playerSeasons = Array.from(seasonsMap.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([seasonNum, eps]) => ({
+      season: seasonNum,
+      episodes: eps.map((ep) => ({
+        id: ep.id,
+        episode: ep.episodeNumber,
+        title: ep.title,
+        video: ep.videoUrl || "",
+        videoProvider: ep.videoProvider,
+        isOpen: ep.isOpen,
+        reason: ep.reason,
+        unlockPrice: ep.unlockPricePerEpisode,
+      })),
+    }));
 
   const similar = similarData.items.map((d) => ({
     id: d.id,
@@ -165,11 +146,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
             </div>
               </div>
 
-              {drama.description && (
-                <p className="text-sm text-start sm:text-base text-gray-400 leading-relaxed max-w-3xl">
-                  {drama.description}
-                </p>
-              )}
+              {drama.description && <Description text={drama.description} />}
 
               {/* Additional metadata */}
               {(drama.director || drama.network || drama.language || (drama.tags && drama.tags.length > 0)) && (
@@ -233,8 +210,12 @@ export default async function MoviePage({ params }: MoviePageProps) {
                     <span className="w-0.5 h-4 bg-second rounded-full" /> Aktyorlar
                   </h3>
                   <div className="flex flex-wrap gap-3 sm:gap-4 justify-start">
-                    {drama.actors.map((actor, index) => (
-                      <div key={index} className="group text-center">
+                    {drama.actors.map((actor) => (
+                      <Link
+                        key={actor.id}
+                        href={`/aktyorlar/${actor.id}`}
+                        className="group text-center active:scale-95 transition-transform duration-200"
+                      >
                         <div className="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto mb-1">
                           {actor.actorImg ? (
                             <SafeImage
@@ -245,13 +226,13 @@ export default async function MoviePage({ params }: MoviePageProps) {
                               className="object-cover rounded-full border-2 border-white/10 group-hover:border-second/50 transition-colors duration-200"
                             />
                           ) : (
-                            <div className="w-full h-full rounded-full bg-white/10 flex items-center justify-center text-lg font-bold text-white/50">
+                            <div className="w-full h-full rounded-full bg-white/10 flex items-center justify-center text-lg font-bold text-white/50 border-2 border-white/10 group-hover:border-second/50 transition-colors duration-200">
                               {actor.name.charAt(0)}
                             </div>
                           )}
                         </div>
-                        <p className="text-[10px] sm:text-[11px] text-gray-500 group-hover:text-white transition-colors duration-200 max-w-[70px] sm:max-w-[80px] truncate">{actor.name}</p>
-                      </div>
+                        <p className="text-[10px] sm:text-[11px] text-gray-500 group-hover:text-second transition-colors duration-200 max-w-[70px] sm:max-w-[80px] truncate">{actor.name}</p>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -261,23 +242,92 @@ export default async function MoviePage({ params }: MoviePageProps) {
         </div>
 
         {/* --- STATS --- */}
-        <section className="mt-10 sm:mt-14 md:mt-20 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
-          {[
-            { label: "Ko'rildi", val: drama.viewsCount?.toLocaleString() || "—", icon: LuEye },
-            { label: "Reyting", val: drama.imdbRating ?? "—", icon: FaStar, color: "text-yellow-500" },
-            { label: "Status", val: drama.status === "ongoing" ? "Davom etmoqda" : "Tugagan", icon: LuFilm },
-            ...(drama.likesCount !== undefined ? [{ label: "Yoqdi", val: drama.likesCount.toLocaleString(), icon: LuThumbsUp, color: "text-blue-400" }] : []),
-            ...(drama.totalEpisodes ? [{ label: "Qismlar", val: `${drama.totalEpisodes}${drama.freeEpisodesCount ? ` (${drama.freeEpisodesCount} bepul)` : ""}`, icon: LuFilm, color: "text-green-400" }] : []),
-          ].map((stat, i) => (
-            <div key={i} className="bg-white/[0.03] border border-white/5 p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl hover:bg-white/[0.06] transition-colors duration-200">
-              <div className="flex items-center gap-2 mb-1.5">
-                <stat.icon className={`text-base sm:text-lg ${stat.color || "text-gray-500"}`} />
-                <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider font-semibold">{stat.label}</p>
+        {(() => {
+          const stats: {
+            label: string;
+            val: string | number;
+            icon: any;
+            suffix?: string;
+          }[] = [
+            {
+              label: "Ko'rildi",
+              val: drama.viewsCount?.toLocaleString() || "—",
+              icon: LuEye,
+            },
+            {
+              label: "Reyting",
+              val: drama.imdbRating ?? "—",
+              icon: FaStar,
+              suffix: drama.imdbRating ? "/10" : undefined,
+            },
+            {
+              label: "Status",
+              val: drama.status === "ongoing" ? "Davom etmoqda" : "Tugagan",
+              icon: LuFilm,
+            },
+          ];
+          if (drama.likesCount !== undefined) {
+            stats.push({
+              label: "Yoqdi",
+              val: drama.likesCount.toLocaleString(),
+              icon: LuThumbsUp,
+            });
+          }
+          if (drama.totalEpisodes) {
+            stats.push({
+              label: "Qismlar",
+              val: String(drama.totalEpisodes),
+              icon: LuFilm,
+              suffix: drama.freeEpisodesCount
+                ? ` · ${drama.freeEpisodesCount} bepul`
+                : undefined,
+            });
+          }
+
+          const count = stats.length;
+          const mdCols =
+            count === 3
+              ? "md:grid-cols-3"
+              : count === 4
+                ? "md:grid-cols-4"
+                : "md:grid-cols-5";
+          const smCols =
+            count <= 2 ? "sm:grid-cols-2" : "sm:grid-cols-3";
+
+          return (
+            <section className="mt-10 sm:mt-14 md:mt-20">
+              <div
+                className={`grid grid-cols-2 ${smCols} ${mdCols} gap-2.5 sm:gap-3 md:gap-4`}
+              >
+                {stats.map((stat, i) => (
+                  <div
+                    key={i}
+                    className="group relative bg-white/[0.02] border border-white/5 hover:border-second/25 hover:bg-white/[0.04] rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-second/10 border border-second/20 flex items-center justify-center shrink-0 group-hover:bg-second/15 group-hover:border-second/30 transition-colors duration-300">
+                        <stat.icon className="text-second text-sm sm:text-base" />
+                      </div>
+                      <p className="text-[10px] sm:text-[11px] text-gray-500 uppercase tracking-widest font-semibold">
+                        {stat.label}
+                      </p>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <p className="text-lg sm:text-xl md:text-2xl font-black tracking-tight truncate">
+                        {stat.val}
+                      </p>
+                      {stat.suffix && (
+                        <span className="text-[11px] sm:text-xs text-gray-500 font-semibold shrink-0">
+                          {stat.suffix}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <p className="text-sm sm:text-lg md:text-xl font-bold truncate">{stat.val}</p>
-            </div>
-          ))}
-        </section>
+            </section>
+          );
+        })()}
 
         {/* --- PLAYER --- */}
         {playerSeasons.length > 0 && (
@@ -286,9 +336,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
               <div className="w-1 h-5 bg-second rounded-full" />
               <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Tomosha qilish</h2>
             </div>
-            <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-white/5">
-              <Player seasons={playerSeasons} dramaId={id} />
-            </div>
+            <EpisodePlayer seasons={playerSeasons} dramaId={id} />
           </section>
         )}
 
@@ -321,18 +369,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
               <div className="w-1 h-5 bg-second rounded-full" />
               <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Sizga yoqishi mumkin</h2>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-              {similar.map((item) => (
-                <Card
-                  key={item.id}
-                  id={item.id}
-                  title={item.title}
-                  poster={item.poster}
-                  seriesNumber={item.seriesNumber}
-                  seasonNumber={item.seasonNumber}
-                />
-              ))}
-            </div>
+            <SimilarSwiper items={similar} />
           </section>
         )}
       </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getTips, getLegalLinks, type Tip } from "@/lib/api";
 import Breadcrumb from "../components/BreadCrumb";
+import EmptyState from "../components/EmptyState";
 import { FaLightbulb, FaExternalLinkAlt } from "react-icons/fa";
 
 export default function TipsPage() {
@@ -37,10 +38,11 @@ export default function TipsPage() {
           ))}
         </div>
       ) : tips.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-5xl mb-4">💡</p>
-          <p className="text-gray-400">Hozircha maslahatlar yo&apos;q</p>
-        </div>
+        <EmptyState
+          variant="tips"
+          title="Maslahatlar hali tayyor emas"
+          description="Ilovadan foydalanish yuzasidan foydali maslahatlar tez orada bu yerda paydo bo'ladi"
+        />
       ) : (
         <div className="space-y-3">
           {tips.map((tip) => (

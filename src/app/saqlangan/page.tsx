@@ -3,15 +3,18 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { getSaved, removeSaved, bulkRemoveSaved, type DramaItem } from "@/lib/api";
+import { getSaved, bulkRemoveSaved, type SavedItem } from "@/lib/api";
+import { useSaved } from "@/lib/saved-context";
 import Card from "../components/Card";
 import Breadcrumb from "../components/BreadCrumb";
+import EmptyState from "../components/EmptyState";
 import { FaTrash, FaCheck, FaTimes } from "react-icons/fa";
 
 export default function SaqlanganPage() {
   const router = useRouter();
   const { user, token, loading } = useAuth();
-  const [items, setItems] = useState<DramaItem[]>([]);
+  const { toggleSaved, markUnsaved } = useSaved();
+  const [items, setItems] = useState<SavedItem[]>([]);
   const [fetching, setFetching] = useState(true);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -33,12 +36,8 @@ export default function SaqlanganPage() {
 
   const handleRemove = async (dramaId: string) => {
     if (!token) return;
-    try {
-      await removeSaved(token, dramaId);
-      setItems((prev) => prev.filter((d) => d.id !== dramaId));
-    } catch {
-      // ignore
-    }
+    setItems((prev) => prev.filter((d) => d.dramaId !== dramaId));
+    await toggleSaved(dramaId);
   };
 
   const toggleSelect = (id: string) => {
@@ -54,7 +53,7 @@ export default function SaqlanganPage() {
     if (selected.size === items.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(items.map((d) => d.id)));
+      setSelected(new Set(items.map((d) => d.dramaId)));
     }
   };
 
@@ -62,8 +61,10 @@ export default function SaqlanganPage() {
     if (!token || selected.size === 0) return;
     setDeleting(true);
     try {
-      await bulkRemoveSaved(token, Array.from(selected));
-      setItems((prev) => prev.filter((d) => !selected.has(d.id)));
+      const ids = Array.from(selected);
+      await bulkRemoveSaved(token, ids);
+      ids.forEach((id) => markUnsaved(id));
+      setItems((prev) => prev.filter((d) => !selected.has(d.dramaId)));
       setSelected(new Set());
       setSelectMode(false);
     } catch {
@@ -125,45 +126,43 @@ export default function SaqlanganPage() {
       </div>
 
       {fetching ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="aspect-[2/3] skeleton rounded-xl" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-5xl mb-4">📑</p>
-          <h3 className="text-xl font-medium mb-2">Hali hech narsa saqlanmagan</h3>
-          <p className="text-gray-400 text-sm mb-6">Drama yoki filmlarni saqlang va bu yerda ko&apos;ring</p>
-        </div>
+        <EmptyState
+          variant="saved"
+          title="Hali hech narsa saqlanmagan"
+          description="Drama yoki filmlarni saqlang va bu yerda kolleksiyangizni yig'ing"
+        />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {items.map((item, index) => (
-            <div key={`${item.id}-${index}`} className="relative group/card">
+            <div key={`${item.dramaId}-${index}`} className="relative group/card">
               {selectMode && (
                 <button
-                  onClick={() => toggleSelect(item.id)}
+                  onClick={() => toggleSelect(item.dramaId)}
                   className={`absolute top-2 left-2 z-20 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${
-                    selected.has(item.id)
+                    selected.has(item.dramaId)
                       ? "bg-second border-second"
                       : "border-white/40 bg-black/40"
                   }`}
                 >
-                  {selected.has(item.id) && <FaCheck className="text-white text-[8px]" />}
+                  {selected.has(item.dramaId) && <FaCheck className="text-white text-[8px]" />}
                 </button>
               )}
               <Card
-                id={item.id}
-                title={item.title}
-                poster={item.posterUrl}
-                seriesNumber={item.seriesNumber}
-                seasonNumber={item.seasonNumber}
-                genres={item.genres}
+                id={item.dramaId}
+                title={item.drama.title}
+                poster={item.drama.posterUrl}
+                genres={item.drama.genres?.map((g) => g.title)}
               />
               {!selectMode && (
                 <button
-                  onClick={() => handleRemove(item.id)}
-                  className="absolute top-2 right-2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-red-500/80 text-white opacity-0 group-hover/card:opacity-100 transition hover:bg-red-600"
+                  onClick={() => handleRemove(item.dramaId)}
+                  className="absolute top-2 left-2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-red-500/80 text-white opacity-0 group-hover/card:opacity-100 transition hover:bg-red-600"
                   aria-label="O'chirish"
                 >
                   <FaTrash className="text-xs" />

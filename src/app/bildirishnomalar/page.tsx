@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { getNotifications, markNotificationRead, markAllNotificationsRead, type NotificationItem, type Pagination } from "@/lib/api";
 import Breadcrumb from "../components/BreadCrumb";
+import EmptyState from "../components/EmptyState";
 import { FaBell, FaCheckDouble } from "react-icons/fa";
 import Link from "next/link";
 
@@ -116,11 +117,11 @@ export default function BildirishnomalarPage() {
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <FaBell className="text-4xl text-gray-600 mb-3" />
-          <h3 className="text-xl font-medium mb-2">Bildirishnomalar yo&apos;q</h3>
-          <p className="text-gray-400 text-sm">Yangi bildirishnomalar bu yerda ko&apos;rinadi</p>
-        </div>
+        <EmptyState
+          variant="notifications"
+          title="Bildirishnomalar yo'q"
+          description="Yangi epizodlar, premyeralar va sevimli aktyorlaringiz haqida xabarlar bu yerda ko'rinadi"
+        />
       ) : (
         <>
           <div className="space-y-1">
