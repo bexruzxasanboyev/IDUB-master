@@ -85,7 +85,7 @@ export default function MovieHeroSwiper({ slides }: Props) {
                   >
                     {/* Genres */}
                     <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                      {slide.genres?.slice(0, 3).map((g: any, i: number) => (
+                      {slide.genres?.slice(0, 3).map((g, i) => (
                         <span
                           key={i}
                           className="px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs bg-white/10 backdrop-blur-md rounded-md sm:rounded-lg border border-white/10 font-medium"

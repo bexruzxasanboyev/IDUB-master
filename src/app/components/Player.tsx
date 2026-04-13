@@ -68,7 +68,7 @@ export default function Player({ seasons, dramaId }: Props) {
     setUnlocking(true);
     try {
       const result = await unlockEpisodes(token, dramaId, [currentEpisode.episode]);
-      if (result.unlocked.includes(currentEpisode.episode)) {
+      if (result.unlockedEpisodeNumbers.includes(currentEpisode.episode)) {
         setLocalSeasons((prev) =>
           prev.map((s, si) =>
             si === seasonIndex

@@ -110,7 +110,7 @@ export type Slide = {
   desc: string
   banner: string
 
-  genres?: string[]
+  genres?: (string | { title?: string; slug?: string })[]
   seasonNumber?: number
   seriesNumber?: number
 

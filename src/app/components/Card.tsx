@@ -14,7 +14,7 @@ type CardProps = {
   poster: string;
   seriesNumber?: number;
   seasonNumber?: number;
-  genres?: string[];
+  genres?: (string | { title?: string; slug?: string })[];
 };
 
 export default function Card({

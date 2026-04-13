@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (
       updater:
         | UserProfile
+        | null
         | ((prev: UserProfile | null) => UserProfile | null)
     ) => {
       setUserState((prev) => {
