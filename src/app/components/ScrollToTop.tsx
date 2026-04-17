@@ -7,8 +7,18 @@ export default function ScrollToTop() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const toggle = () => setVisible(window.scrollY > 400);
-    window.addEventListener("scroll", toggle);
+    // Passive + rAF-throttled — updates happen at most once per frame and
+    // don't block the scroll thread.
+    let ticking = false;
+    const toggle = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        setVisible(window.scrollY > 400);
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", toggle, { passive: true });
     return () => window.removeEventListener("scroll", toggle);
   }, []);
 

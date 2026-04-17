@@ -151,7 +151,11 @@ export default function Section({
           </Swiper>
         </div>
 
-        <Modal open={open} onClose={() => setOpen(false)} movie={selected} />
+        {/* Only mount the Modal tree once the user actually opens it —
+            keeps every Section's idle cost near zero. */}
+        {(open || selected) && (
+          <Modal open={open} onClose={() => setOpen(false)} movie={selected} />
+        )}
       </div>
     </section>
   );

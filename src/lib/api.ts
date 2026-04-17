@@ -2,14 +2,27 @@ const SERVER_URL = process.env.NEXT_PUBLIC_API_URL || "https://idubbackend.asosi
 const isServer = typeof window === "undefined";
 const BASE_URL = isServer ? SERVER_URL : "/api-proxy";
 
+// Cached SERVER_URL host for normalizeImageUrl (avoid repeated URL parsing on every call)
+let _serverHost: string | null = null;
+function getServerHost(): string {
+  if (_serverHost === null) {
+    try {
+      _serverHost = new URL(SERVER_URL).host;
+    } catch {
+      _serverHost = "";
+    }
+  }
+  return _serverHost;
+}
+
 export function normalizeImageUrl(url?: string | null): string {
   if (!url) return "";
   if (url.startsWith("data:") || url.startsWith("blob:")) return url;
   if (url.startsWith("http://") || url.startsWith("https://")) {
     try {
       const parsed = new URL(url);
-      const serverHost = new URL(SERVER_URL).host;
-      if (parsed.host !== serverHost) {
+      const serverHost = getServerHost();
+      if (serverHost && parsed.host !== serverHost) {
         return `${SERVER_URL}${parsed.pathname}`;
       }
     } catch {}
@@ -26,21 +39,61 @@ type ApiResponse<T> = {
   error: { code: string; message: string };
 };
 
+type RequestOptions = RequestInit & {
+  token?: string;
+  /**
+   * Revalidation interval for Next.js fetch cache (server-side only).
+   * - number: seconds to cache
+   * - false: don't cache (default for non-GET)
+   * - undefined: use default behavior
+   */
+  revalidate?: number | false;
+  /**
+   * Cache tags for on-demand revalidation
+   */
+  tags?: string[];
+};
+
 async function request<T>(
   path: string,
-  options?: RequestInit & { token?: string }
+  options?: RequestOptions
 ): Promise<T> {
-  const { token, ...init } = options || {};
+  const { token, revalidate, tags, ...init } = options || {};
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init.headers as Record<string, string>),
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const method = (init.method || "GET").toUpperCase();
+  const isGet = method === "GET";
+
+  // Build Next.js fetch options: enable caching for public GETs on the server;
+  // force no-store for authenticated / mutating requests.
+  const nextOpts: { revalidate?: number | false; tags?: string[] } = {};
+  if (isServer && isGet && !token) {
+    if (revalidate !== undefined) nextOpts.revalidate = revalidate;
+    else nextOpts.revalidate = 60; // default: cache public GETs for 60s
+    if (tags && tags.length) nextOpts.tags = tags;
+  }
+
+  const fetchInit: RequestInit & { next?: typeof nextOpts } = {
     ...init,
     headers,
-  });
+  };
+  // Only attach `next` on the server — it's ignored in the browser but cleaner to omit.
+  if (isServer && isGet) {
+    if (token) {
+      // Authenticated requests must never be cached across users
+      fetchInit.cache = "no-store";
+    } else if (Object.keys(nextOpts).length > 0) {
+      fetchInit.next = nextOpts;
+    }
+  } else if (!isGet) {
+    fetchInit.cache = "no-store";
+  }
+
+  const res = await fetch(`${BASE_URL}${path}`, fetchInit);
 
   const json: ApiResponse<T> = await res.json();
 
@@ -65,19 +118,31 @@ export class ApiError extends Error {
 
 // ─── HOME ───────────────────────────────────────────
 export async function getHome() {
-  return request<{ sections: HomeSection[] }>("/home");
+  return request<{ sections: HomeSection[] }>("/home", {
+    revalidate: 120,
+    tags: ["home"],
+  });
 }
 
 export async function getBestDramas(page = 1, limit = 20) {
-  return request<{ items: DramaItem[] }>(`/bestdramas?page=${page}&limit=${limit}`);
+  return request<{ items: DramaItem[] }>(`/bestdramas?page=${page}&limit=${limit}`, {
+    revalidate: 300,
+    tags: ["best-dramas"],
+  });
 }
 
 export async function getNewDramas() {
-  return request<{ items: DramaItem[] }>("/dramas/new");
+  return request<{ items: DramaItem[] }>("/dramas/new", {
+    revalidate: 180,
+    tags: ["new-dramas"],
+  });
 }
 
 export async function getTrendingDramas(window = "7d") {
-  return request<{ items: DramaItem[] }>(`/dramas/trending?window=${window}`);
+  return request<{ items: DramaItem[] }>(`/dramas/trending?window=${window}`, {
+    revalidate: 300,
+    tags: ["trending", `trending-${window}`],
+  });
 }
 
 // ─── DRAMAS ─────────────────────────────────────────
@@ -98,19 +163,31 @@ export async function getDramas(params: DramaListParams = {}) {
     if (v !== undefined && v !== "") query.set(k, String(v));
   });
   const qs = query.toString();
-  return request<{ items: DramaItem[]; pagination: Pagination }>(`/dramas${qs ? `?${qs}` : ""}`);
+  return request<{ items: DramaItem[]; pagination: Pagination }>(
+    `/dramas${qs ? `?${qs}` : ""}`,
+    { revalidate: 180, tags: ["dramas"] }
+  );
 }
 
 export async function getDrama(id: string) {
-  return request<{ drama: DramaDetail }>(`/dramas/${id}`);
+  return request<{ drama: DramaDetail }>(`/dramas/${id}`, {
+    revalidate: 300,
+    tags: ["drama", `drama-${id}`],
+  });
 }
 
 export async function getSimilarDramas(id: string) {
-  return request<{ items: DramaItem[] }>(`/dramas/${id}/similar`);
+  return request<{ items: DramaItem[] }>(`/dramas/${id}/similar`, {
+    revalidate: 600,
+    tags: [`drama-${id}-similar`],
+  });
 }
 
 export async function getDramaSeasons(id: string) {
-  return request<{ seasons: ApiSeason[] }>(`/dramas/${id}/seasons`);
+  return request<{ seasons: ApiSeason[] }>(`/dramas/${id}/seasons`, {
+    revalidate: 300,
+    tags: [`drama-${id}-seasons`],
+  });
 }
 
 export async function getDramaEpisodes(
@@ -121,7 +198,9 @@ export async function getDramaEpisodes(
   const qs = seasonNumber !== undefined ? `?seasonNumber=${seasonNumber}` : "";
   return request<{ items: ApiEpisode[]; pagination: Pagination }>(
     `/dramas/${id}/episodes${qs}`,
-    token ? { token } : undefined
+    token
+      ? { token }
+      : { revalidate: 300, tags: [`drama-${id}-episodes`] }
   );
 }
 
@@ -131,15 +210,24 @@ export async function markDramaViewed(id: string, token: string) {
 
 // ─── SEARCH ─────────────────────────────────────────
 export async function searchDramas(query: string) {
-  return request<{ items: DramaItem[] }>(`/search?query=${encodeURIComponent(query)}`);
+  return request<{ items: DramaItem[] }>(
+    `/search?query=${encodeURIComponent(query)}`,
+    { revalidate: 60 }
+  );
 }
 
 export async function getTopSearches(window = "7d") {
-  return request<{ items: TopSearch[] }>(`/search/top?window=${window}`);
+  return request<{ items: TopSearch[] }>(`/search/top?window=${window}`, {
+    revalidate: 600,
+    tags: [`top-searches-${window}`],
+  });
 }
 
 export async function getTopSearchedDramas(window = "7d") {
-  return request<{ items: DramaItem[] }>(`/search/top-dramas?window=${window}`);
+  return request<{ items: DramaItem[] }>(`/search/top-dramas?window=${window}`, {
+    revalidate: 600,
+    tags: [`top-dramas-${window}`],
+  });
 }
 
 export async function trackSearchClick(queryNormalized: string, dramaId: string) {
@@ -236,11 +324,17 @@ export async function removeFavoriteActor(token: string, actorId: string) {
 
 // ─── PLANS & SUBSCRIPTION ───────────────────────────
 export async function getPlans() {
-  return request<{ plans: Plan[] }>("/plans");
+  return request<{ plans: Plan[] }>("/plans", {
+    revalidate: 3600,
+    tags: ["plans"],
+  });
 }
 
 export async function getPremiumFeatures() {
-  return request<{ items: PremiumFeature[] }>("/premium-features");
+  return request<{ items: PremiumFeature[] }>("/premium-features", {
+    revalidate: 3600,
+    tags: ["premium-features"],
+  });
 }
 
 export async function getSubscription(token: string) {
@@ -373,7 +467,10 @@ export async function getPlaybackUrl(token: string, episodeId: string) {
 // ─── SCHEDULE ───────────────────────────────────────
 export async function getSchedule(category?: string) {
   const qs = category ? `?category=${category}` : "";
-  return request<{ items: ScheduleItem[] }>(`/schedule${qs}`);
+  return request<{ items: ScheduleItem[] }>(`/schedule${qs}`, {
+    revalidate: 300,
+    tags: ["schedule"],
+  });
 }
 
 export async function addReminder(token: string, scheduleId: string) {
@@ -422,28 +519,46 @@ export async function getRecommendation(token: string) {
 
 // ─── ACTORS ─────────────────────────────────────────
 export async function getActors(page = 1, limit = 20) {
-  return request<{ items: ActorItem[]; pagination: Pagination }>(`/actors?page=${page}&limit=${limit}`);
+  return request<{ items: ActorItem[]; pagination: Pagination }>(
+    `/actors?page=${page}&limit=${limit}`,
+    { revalidate: 600, tags: ["actors"] }
+  );
 }
 
 export async function searchActors(q: string, page = 1, limit = 20) {
-  return request<{ items: ActorItem[] }>(`/actors/search?q=${encodeURIComponent(q)}&page=${page}&limit=${limit}`);
+  return request<{ items: ActorItem[] }>(
+    `/actors/search?q=${encodeURIComponent(q)}&page=${page}&limit=${limit}`,
+    { revalidate: 120 }
+  );
 }
 
 export async function getActor(id: string) {
-  return request<ActorDetail>(`/actors/${id}`);
+  return request<ActorDetail>(`/actors/${id}`, {
+    revalidate: 600,
+    tags: [`actor-${id}`],
+  });
 }
 
 export async function getActorDramas(id: string, page = 1, limit = 20) {
-  return request<{ items: DramaItem[]; pagination: Pagination }>(`/actors/${id}/dramas?page=${page}&limit=${limit}`);
+  return request<{ items: DramaItem[]; pagination: Pagination }>(
+    `/actors/${id}/dramas?page=${page}&limit=${limit}`,
+    { revalidate: 600, tags: [`actor-${id}-dramas`] }
+  );
 }
 
 // ─── GENRES & CATEGORIES ────────────────────────────
 export async function getGenres() {
-  return request<{ genres: Genre[] }>("/genres");
+  return request<{ genres: Genre[] }>("/genres", {
+    revalidate: 3600,
+    tags: ["genres"],
+  });
 }
 
 export async function getCategories() {
-  return request<{ groups: CategoryGroup[] }>("/categories");
+  return request<{ groups: CategoryGroup[] }>("/categories", {
+    revalidate: 3600,
+    tags: ["categories"],
+  });
 }
 
 // ─── PROMO ──────────────────────────────────────────
@@ -457,11 +572,17 @@ export async function redeemPromo(token: string, code: string) {
 
 // ─── APP CONTENT ────────────────────────────────────
 export async function getTips() {
-  return request<{ items: Tip[] }>("/app/tips");
+  return request<{ items: Tip[] }>("/app/tips", {
+    revalidate: 3600,
+    tags: ["tips"],
+  });
 }
 
 export async function getLegalLinks() {
-  return request<{ termsUrl: string; privacyUrl: string }>("/app/legal_links");
+  return request<{ termsUrl: string; privacyUrl: string }>("/app/legal_links", {
+    revalidate: 86400,
+    tags: ["legal"],
+  });
 }
 
 // ─── DOWNLOADS ──────────────────────────────────────

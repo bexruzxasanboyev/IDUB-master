@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
 import Header from "./components/Header";
 import ScrollToTop from "./components/ScrollToTop";
@@ -14,6 +15,33 @@ const SITE_URL = (
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
   "https://idub.uz"
 ).replace(/\/$/, "");
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://idubbackend.asosit.uz";
+
+// Self-hosted fonts via next/font — automatic preload, subset, size-adjust,
+// and a CSS variable exposed to Tailwind's @theme in globals.css.
+const fontSora = localFont({
+  src: "./fonts/Sora-VariableFont_wght.ttf",
+  variable: "--font-sora",
+  display: "swap",
+  preload: true,
+  fallback: ["system-ui", "sans-serif"],
+});
+const fontJakarta = localFont({
+  src: "./fonts/PlusJakartaSans-VariableFont_wght.ttf",
+  variable: "--font-jakarta",
+  display: "swap",
+  preload: true,
+  fallback: ["system-ui", "sans-serif"],
+});
+const fontManrope = localFont({
+  src: "./fonts/Manrope-VariableFont_wght.ttf",
+  variable: "--font-manrope",
+  display: "swap",
+  preload: false, // Secondary UI font — don't block
+  fallback: ["system-ui", "sans-serif"],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -62,7 +90,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="uz">
+    <html
+      lang="uz"
+      className={`${fontSora.variable} ${fontJakarta.variable} ${fontManrope.variable}`}
+    >
+      <head>
+        {/* Start the TCP/TLS handshake to the API + image origin ASAP so
+            above-the-fold banner images and /home fetch begin with zero
+            connection overhead. */}
+        <link rel="preconnect" href={API_URL} crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href={API_URL} />
+      </head>
       <body
         suppressHydrationWarning
         className="antialiased bg-main font-text text-white"

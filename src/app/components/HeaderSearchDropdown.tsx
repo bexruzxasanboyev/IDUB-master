@@ -228,6 +228,8 @@ export default function HeaderSearchDropdown({ onClose }: Props) {
                                   src={normalizeImageUrl(item.posterUrl)}
                                   alt={item.title}
                                   fill
+                                  sizes="48px"
+                                  quality={60}
                                   className="object-cover"
                                 />
                               ) : (

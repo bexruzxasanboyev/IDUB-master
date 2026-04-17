@@ -29,8 +29,18 @@ export default function Header() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
+    // Passive listener — never blocks scroll, and rAF-throttled to avoid
+    // re-rendering Header on every pixel.
+    let ticking = false;
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        setScrolled(window.scrollY > 50);
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -56,21 +66,50 @@ export default function Header() {
     return () => document.removeEventListener("keydown", handler);
   }, [openSearch]);
 
-  // Fetch unread notification count
+  // Fetch unread notification count — deferred so it never competes with
+  // critical above-the-fold rendering; paused while the tab is hidden.
   useEffect(() => {
     if (!token) {
       setUnreadCount(0);
       return;
     }
-    getUnreadCount(token)
-      .then((data) => setUnreadCount(data.count))
-      .catch(() => {});
-    const interval = setInterval(() => {
+    let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | undefined;
+
+    const fetchCount = () => {
+      if (cancelled || document.visibilityState === "hidden") return;
       getUnreadCount(token)
-        .then((data) => setUnreadCount(data.count))
+        .then((data) => {
+          if (!cancelled) setUnreadCount(data.count);
+        })
         .catch(() => {});
-    }, 60000);
-    return () => clearInterval(interval);
+    };
+
+    const start = () => {
+      fetchCount();
+      interval = setInterval(fetchCount, 120000); // 2 min (was 1 min)
+    };
+
+    // Defer first fetch until the browser is idle.
+    const schedule = (cb: () => void) => {
+      const ric = (window as any).requestIdleCallback as
+        | ((cb: () => void, opts?: { timeout: number }) => number)
+        | undefined;
+      if (ric) ric(cb, { timeout: 2000 });
+      else setTimeout(cb, 800);
+    };
+    schedule(start);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") fetchCount();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [token]);
 
   return (
@@ -86,7 +125,15 @@ export default function Header() {
           {/* LEFT: Logo + Nav */}
           <div className="flex items-center gap-6 lg:gap-10">
             <Link href="/" className="shrink-0">
-              <img src="/assets/logo.png" className="w-28 sm:w-32 md:w-40" alt="IDUB" />
+              <Image
+                src="/assets/logo.png"
+                width={160}
+                height={48}
+                priority
+                fetchPriority="high"
+                className="w-28 sm:w-32 md:w-40 h-auto"
+                alt="IDUB"
+              />
             </Link>
 
             {/* Desktop nav */}
@@ -160,7 +207,15 @@ export default function Header() {
               className="w-9 h-9 flex items-center justify-center rounded-full overflow-hidden border border-white/10 hover:border-second/50 transition-colors shrink-0"
             >
               {user?.avatarUrl ? (
-                <Image src={normalizeImageUrl(user.avatarUrl)} alt="" width={36} height={36} className="w-full h-full object-cover" />
+                <Image
+                  src={normalizeImageUrl(user.avatarUrl)}
+                  alt=""
+                  width={36}
+                  height={36}
+                  sizes="36px"
+                  quality={70}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <FaUser className="text-gray-400 text-xs" />
               )}

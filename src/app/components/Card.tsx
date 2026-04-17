@@ -61,6 +61,9 @@ export default function Card({
           alt={title}
           width={500}
           height={750}
+          sizes="(max-width: 480px) 45vw, (max-width: 768px) 30vw, (max-width: 1024px) 22vw, (max-width: 1280px) 18vw, 16vw"
+          quality={75}
+          loading="lazy"
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           onError={() => setImgError(true)}
         />

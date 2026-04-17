@@ -64,6 +64,9 @@ export default function MovieHeroSwiper({ slides }: Props) {
                     alt={slide.title}
                     fill
                     priority={index === 0}
+                    fetchPriority={index === 0 ? "high" : "low"}
+                    sizes="100vw"
+                    quality={80}
                     className="object-cover scale-105"
                     onError={() => setFailedImages((prev) => new Set(prev).add(index))}
                   />

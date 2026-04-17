@@ -35,29 +35,17 @@ html {
   @apply w-full max-w-480 mx-auto px-4 sm:px-6 md:px-10 overflow-x-clip overflow-y-visible;
 }
 
-@font-face {
-  font-family: "Sora";
-  src: url("./fonts/Sora-VariableFont_wght.ttf");
-  font-display: swap;
-}
-@font-face {
-  font-family: "Jakarta";
-  src: url("./fonts/PlusJakartaSans-VariableFont_wght.ttf");
-  font-display: swap;
-}
-@font-face {
-  font-family: "Manrope";
-  src: url("./fonts/Manrope-VariableFont_wght.ttf");
-  font-display: swap;
-}
+/* Fonts are now loaded via next/font/local in app/layout.tsx, which handles
+   automatic preloading, subsetting, and size-adjust to reduce CLS.
+   CSS variables --font-sora, --font-jakarta, --font-manrope are injected on <html>. */
 
 @theme {
   --color-main: #0a0a0a;
   --color-second: #7e54e6;
   --color-surface: #141414;
-  --font-main: "Sora", "sans-serif";
-  --font-second: "Manrope", "sans-serif";
-  --font-text: "Jakarta", "sans-serif";
+  --font-main: var(--font-sora), system-ui, sans-serif;
+  --font-second: var(--font-manrope), system-ui, sans-serif;
+  --font-text: var(--font-jakarta), system-ui, sans-serif;
 }
 
 /* Focus visible for accessibility */

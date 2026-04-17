@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { FaPlay } from "react-icons/fa";
+import { normalizeImageUrl } from "@/lib/api";
 
 type TrendingCardProps = {
   id: string;
@@ -51,10 +52,13 @@ export default function TrendingCard({
             </div>
           ) : (
             <Image
-              src={poster}
+              src={normalizeImageUrl(poster) || poster}
               alt={title}
               width={500}
               height={700}
+              sizes="(max-width: 640px) 144px, (max-width: 768px) 192px, 240px"
+              quality={75}
+              loading="lazy"
               className="w-36 h-52 sm:w-48 sm:h-68 md:w-60 md:h-85 object-cover transition-transform duration-700 ease-out group-hover:scale-110"
               onError={() => setImgError(true)}
             />

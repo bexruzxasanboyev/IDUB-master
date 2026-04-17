@@ -59,6 +59,8 @@ export default function Modal({ open, onClose, movie }: ModalProps) {
             src={normalizeImageUrl(movie.banner || movie.poster)}
             alt={movie.title}
             fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 640px, 720px"
+            quality={75}
             className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-surface/30 to-surface" />
