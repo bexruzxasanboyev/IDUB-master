@@ -109,11 +109,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await authVerify(phone, code);
     setToken(result.accessToken);
     setUser(result.user);
-    localStorage.setItem("idub_auth", JSON.stringify({
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      user: result.user,
-    }));
+    localStorage.setItem(
+      "idub_auth",
+      JSON.stringify({
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        user: result.user,
+      })
+    );
+
+    // The /auth/verify payload can omit derived fields (e.g. avatarUrl,
+    // plan, coin) — fetch the full profile from /me so the UI doesn't have
+    // to wait for a manual page refresh to show the avatar and other data.
+    try {
+      const fullProfile = await getMe(result.accessToken);
+      setUser(fullProfile);
+      localStorage.setItem(
+        "idub_auth",
+        JSON.stringify({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          user: fullProfile,
+        })
+      );
+    } catch {
+      // Non-fatal: the basic user from verify() is already set.
+    }
   }, []);
 
   const logout = useCallback(() => {

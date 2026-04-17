@@ -270,7 +270,18 @@ export default function ProfilPage() {
             <div className="absolute inset-0 rounded-full bg-second/20 blur-xl" />
             <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-main ring-1 ring-white/10">
               {user.avatarUrl ? (
-                <Image src={normalizeImageUrl(user.avatarUrl)} alt="Avatar" fill className="object-cover" />
+                <Image
+                  // Re-mount when the URL changes so the browser never keeps
+                  // a stale pending request from a previous login session.
+                  key={user.avatarUrl}
+                  src={normalizeImageUrl(user.avatarUrl)}
+                  alt="Avatar"
+                  fill
+                  sizes="128px"
+                  quality={80}
+                  priority
+                  className="object-cover"
+                />
               ) : (
                 <div className="w-full h-full bg-white/[0.04] flex items-center justify-center">
                   <FaUser className="text-white/40 text-4xl" />

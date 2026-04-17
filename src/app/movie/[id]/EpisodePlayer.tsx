@@ -181,49 +181,55 @@ export default function EpisodePlayer({ seasons: initialSeasons, dramaId }: Prop
 
   return (
     <div className="w-full" id="movie">
-      {/* Video area */}
-      <div className="relative w-full aspect-video bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-white/5">
-        {isLocked ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-black via-main/95 to-black z-10 p-4 sm:p-6 text-center overflow-y-auto">
+      {/* Video area — locked state uses a flow-sized card (no aspect-video
+          constraint) so the content never overflows on narrow screens.
+          Playable state keeps the 16:9 video box. */}
+      {isLocked ? (
+        <div className="relative w-full bg-gradient-to-br from-black via-main/95 to-black rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-white/5">
+          {/* Decorative glow */}
+          <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full bg-second/15 blur-3xl" />
+
+          <div className="relative flex flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-10 md:py-14 text-center">
             <div className="relative mb-4 sm:mb-5">
               <div className="absolute inset-0 rounded-full bg-second/20 blur-2xl scale-150" />
-              <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/[0.06] border border-second/30 flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                <FaLock className="text-second text-xl sm:text-2xl" />
+              <div className="relative w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-white/[0.06] border border-second/30 flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                <FaLock className="text-second text-lg sm:text-2xl" />
               </div>
             </div>
 
-            <h3 className="text-xl sm:text-2xl font-black tracking-tight mb-2 text-white">
+            <h3 className="text-lg sm:text-2xl font-black tracking-tight mb-1.5 sm:mb-2 text-white">
               {currentEpisode.episode}-qism qulflangan
             </h3>
-            <p className="text-xs sm:text-sm text-gray-400 max-w-md mb-4 sm:mb-5 leading-relaxed">
+            <p className="text-[11px] sm:text-sm text-gray-400 max-w-md mb-4 sm:mb-5 leading-relaxed px-2">
               Premium obuna bo&apos;ling yoki coin bilan bu qismni oching
             </p>
 
-            {/* Price card */}
+            {/* Price card — stacks on mobile, row on sm+ so it never
+                overflows a narrow viewport. */}
             {price > 0 && (
-              <div className="mb-5 sm:mb-6 inline-flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 bg-white/[0.04] border border-second/25 rounded-xl sm:rounded-2xl">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-second/15 border border-second/25 flex items-center justify-center">
+              <div className="mb-4 sm:mb-6 w-full max-w-sm sm:w-auto sm:max-w-none sm:inline-flex flex flex-row items-stretch sm:items-center justify-center gap-2 sm:gap-4 px-3 sm:px-5 py-2.5 sm:py-3.5 bg-white/[0.04] border border-second/25 rounded-xl sm:rounded-2xl">
+                <div className="flex items-center gap-2 flex-1 sm:flex-initial min-w-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-second/15 border border-second/25 flex items-center justify-center shrink-0">
                     <FaCoins className="text-second text-sm sm:text-base" />
                   </div>
-                  <div className="text-left">
-                    <p className="text-[10px] sm:text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
+                  <div className="text-left min-w-0">
+                    <p className="text-[9px] sm:text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
                       Narxi
                     </p>
-                    <p className="text-base sm:text-lg font-black text-white">
-                      {price} <span className="text-[11px] sm:text-xs font-semibold text-gray-400">coin</span>
+                    <p className="text-sm sm:text-lg font-black text-white truncate">
+                      {price} <span className="text-[10px] sm:text-xs font-semibold text-gray-400">coin</span>
                     </p>
                   </div>
                 </div>
-                <div className="h-8 sm:h-10 w-px bg-white/10" />
-                <div className="text-left">
-                  <p className="text-[10px] sm:text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
+                <div className="w-px bg-white/10 self-stretch sm:h-10 sm:w-px" />
+                <div className="text-left flex-1 sm:flex-initial min-w-0 flex flex-col justify-center">
+                  <p className="text-[9px] sm:text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
                     Sizda
                   </p>
                   <p
-                    className={`text-base sm:text-lg font-black ${hasEnoughCoins ? "text-white" : "text-red-400"}`}
+                    className={`text-sm sm:text-lg font-black truncate ${hasEnoughCoins ? "text-white" : "text-red-400"}`}
                   >
-                    {userCoins} <span className="text-[11px] sm:text-xs font-semibold text-gray-400">coin</span>
+                    {userCoins} <span className="text-[10px] sm:text-xs font-semibold text-gray-400">coin</span>
                   </p>
                 </div>
               </div>
@@ -231,19 +237,19 @@ export default function EpisodePlayer({ seasons: initialSeasons, dramaId }: Prop
 
             {/* Error */}
             {unlockError && (
-              <p className="mb-4 text-xs sm:text-sm text-red-400 font-semibold">
+              <p className="mb-3 sm:mb-4 text-xs sm:text-sm text-red-400 font-semibold px-2">
                 {unlockError}
               </p>
             )}
 
             {/* Actions */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center w-full max-w-md">
               {token && price > 0 && (
                 hasEnoughCoins ? (
                   <button
                     onClick={handleUnlock}
                     disabled={unlocking}
-                    className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-second text-white rounded-xl font-semibold text-xs sm:text-sm hover:bg-second/85 transition-all duration-300 active:scale-95 shadow-[0_8px_30px_rgba(126,84,230,0.35)] disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-second text-white rounded-xl font-semibold text-xs sm:text-sm hover:bg-second/85 transition-all duration-300 active:scale-95 shadow-[0_8px_30px_rgba(126,84,230,0.35)] disabled:opacity-60 flex-1 sm:flex-initial min-w-[140px]"
                   >
                     {unlocking ? (
                       <>
@@ -260,7 +266,7 @@ export default function EpisodePlayer({ seasons: initialSeasons, dramaId }: Prop
                 ) : (
                   <Link
                     href="/coin"
-                    className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-second text-white rounded-xl font-semibold text-xs sm:text-sm hover:bg-second/85 transition-all duration-300 active:scale-95 shadow-[0_8px_30px_rgba(126,84,230,0.35)]"
+                    className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-second text-white rounded-xl font-semibold text-xs sm:text-sm hover:bg-second/85 transition-all duration-300 active:scale-95 shadow-[0_8px_30px_rgba(126,84,230,0.35)] flex-1 sm:flex-initial min-w-[140px]"
                   >
                     <FaCoins className="text-xs sm:text-sm" />
                     Coin to&apos;ldirish
@@ -269,7 +275,7 @@ export default function EpisodePlayer({ seasons: initialSeasons, dramaId }: Prop
               )}
               <Link
                 href="/obuna"
-                className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 active:scale-95 ${
+                className={`inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 active:scale-95 flex-1 sm:flex-initial min-w-[140px] ${
                   !token || price === 0
                     ? "bg-second text-white hover:bg-second/85 shadow-[0_8px_30px_rgba(126,84,230,0.35)]"
                     : "bg-white/[0.06] border border-white/15 text-white hover:bg-white/[0.1] hover:border-second/30"
@@ -281,26 +287,30 @@ export default function EpisodePlayer({ seasons: initialSeasons, dramaId }: Prop
               {!token && (
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-white/[0.06] border border-white/15 text-white rounded-xl font-semibold text-xs sm:text-sm hover:bg-white/[0.1] hover:border-second/30 transition-all duration-300 active:scale-95"
+                  className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-white/[0.06] border border-white/15 text-white rounded-xl font-semibold text-xs sm:text-sm hover:bg-white/[0.1] hover:border-second/30 transition-all duration-300 active:scale-95 flex-1 sm:flex-initial min-w-[120px]"
                 >
                   Kirish
                 </Link>
               )}
             </div>
           </div>
-        ) : currentEpisode.video ? (
-          <iframe
-            src={currentEpisode.video}
-            className="w-full h-full"
-            allowFullScreen
-            allow="autoplay; fullscreen; encrypted-media"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-            Video mavjud emas
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="relative w-full aspect-video bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-white/5">
+          {currentEpisode.video ? (
+            <iframe
+              src={currentEpisode.video}
+              className="w-full h-full"
+              allowFullScreen
+              allow="autoplay; fullscreen; encrypted-media"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+              Video mavjud emas
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Episode selector */}
       <div className="mt-4 sm:mt-5">

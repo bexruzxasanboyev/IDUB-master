@@ -208,6 +208,7 @@ export default function Header() {
             >
               {user?.avatarUrl ? (
                 <Image
+                  key={user.avatarUrl}
                   src={normalizeImageUrl(user.avatarUrl)}
                   alt=""
                   width={36}
