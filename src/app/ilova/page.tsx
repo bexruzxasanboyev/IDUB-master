@@ -73,14 +73,17 @@ export default function IlovaPage() {
       <div className="container">
         {/* Hero */}
         <div className="grid md:grid-cols-[auto,1fr] gap-6 md:gap-8 items-center mb-10 sm:mb-14">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 shrink-0">
+          <div
+            className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-3xl flex items-center justify-center shadow-2xl shadow-second/25 shrink-0"
+            style={{ backgroundColor: "#121212" }}
+          >
             <Image
               src="/assets/app-logo.webp"
               width={128}
               height={128}
               alt="iDub"
               priority
-              className="w-full h-full object-contain drop-shadow-[0_8px_24px_rgba(126,84,230,0.45)]"
+              className="w-[70%] h-[70%] object-contain"
             />
           </div>
           <div className="flex-1">
