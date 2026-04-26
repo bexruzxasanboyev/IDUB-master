@@ -5,19 +5,19 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, Download, Smartphone, Star, Shield, Zap } from "lucide-react";
 
 const SCREENSHOTS = [
-  "/assets/app/photo_1_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_2_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_3_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_4_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_5_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_6_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_7_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_8_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_9_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_10_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_11_2026-04-26_16-03-19.jpg",
-  "/assets/app/photo_12_2026-04-26_16-03-19.jpg",
   "/assets/app/photo_13_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_12_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_11_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_10_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_9_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_8_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_7_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_6_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_5_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_4_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_3_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_2_2026-04-26_16-03-19.jpg",
+  "/assets/app/photo_1_2026-04-26_16-03-19.jpg",
 ];
 
 const FEATURES = [
