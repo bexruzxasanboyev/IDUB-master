@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Download, Smartphone, Star, Shield, Zap } fr
 
 const SCREENSHOTS = [
   "/assets/app/photo_13_2026-04-26_16-03-19.jpg",
+  "/assets/app/image.png",
   "/assets/app/photo_12_2026-04-26_16-03-19.jpg",
   "/assets/app/photo_11_2026-04-26_16-03-19.jpg",
   "/assets/app/photo_10_2026-04-26_16-03-19.jpg",
