@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   productionBrowserSourceMaps: false,
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     // Serve modern formats when the browser supports them
     formats: ["image/avif", "image/webp"],

@@ -17,6 +17,7 @@ const navs = [
   { name: "Mashxur", href: "/mashxur" },
   { name: "Janrlar", href: "/janrlar" },
   { name: "Aktyorlar", href: "/aktyorlar" },
+  { name: "Ilova", href: "/ilova" },
 ];
 
 export default function Header() {
@@ -233,31 +234,62 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile menu (smooth height transition) */}
+      </header>
+
+      {/* Mobile fullscreen drawer */}
+      <div
+        className={`md:hidden fixed inset-0 z-50 transition-opacity duration-300 ${
+          mobileMenu ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        aria-hidden={!mobileMenu}
+      >
+        {/* Backdrop */}
         <div
-          className={`md:hidden overflow-hidden transition-all duration-400 ease-out ${
-            mobileMenu ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          onClick={() => setMobileMenu(false)}
+        />
+        {/* Drawer panel */}
+        <div
+          className={`absolute top-0 left-0 bottom-0 w-[85%] max-w-sm bg-main border-r border-white/5 shadow-2xl transition-transform duration-300 ${
+            mobileMenu ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="bg-main/98 backdrop-blur-xl border-t border-white/5">
-            <nav className="container flex flex-col py-3 gap-0.5">
-              {navs.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-4 py-3 rounded-xl transition-all duration-300 ${
-                    pathname === item.href
-                      ? "bg-second/15 text-second font-semibold border-l-2 border-second"
-                      : "text-white/80 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+            <Link href="/" onClick={() => setMobileMenu(false)} className="shrink-0">
+              <Image
+                src="/assets/logo.png"
+                width={140}
+                height={42}
+                className="w-32 h-auto"
+                alt="IDUB"
+              />
+            </Link>
+            <button
+              onClick={() => setMobileMenu(false)}
+              className="w-9 h-9 flex items-center justify-center text-white/80 hover:text-white"
+              aria-label="Yopish"
+            >
+              <X size={20} />
+            </button>
           </div>
+          <nav className="flex flex-col py-3 px-3 gap-1 overflow-y-auto max-h-[calc(100vh-72px)]">
+            {navs.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileMenu(false)}
+                className={`px-4 py-3.5 rounded-xl transition-all duration-200 ${
+                  pathname === item.href
+                    ? "bg-second/15 text-second font-semibold border-l-2 border-second"
+                    : "text-white/80 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </nav>
         </div>
-      </header>
+      </div>
 
       {openSearch && (
         <HeaderSearchDropdown onClose={() => setOpenSearch(false)} />
