@@ -69,7 +69,7 @@ export default function IlovaPage() {
   }, [lightbox]);
 
   return (
-    <div className="min-h-screen pt-20 pb-12">
+    <div className="min-h-screen pt-30 pb-12">
       <div className="container">
         {/* Hero */}
         <div className="grid md:grid-cols-[auto,1fr] gap-6 md:gap-8 items-center mb-10 sm:mb-14">
